@@ -1,0 +1,16 @@
+{
+	"compatibility_date": "2025-10-08",
+	"main": "src/index.ts",
+	"name": "authnex",
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_id": "769b0e0a-7a1a-4d4f-a591-ceeea330276b",
+			"database_name": "authnex-d1"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}
