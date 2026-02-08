@@ -1,8 +1,14 @@
 {
-	"compatibility_date": "2025-10-08",
-	"main": "src/index.ts",
 	"name": "authnex",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-02-07",
 	"upload_source_maps": true,
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -10,7 +16,26 @@
 			"database_name": "authnex-d1"
 		}
 	],
-	"observability": {
-		"enabled": true
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "f1b36ecc8e8b4187ab69944d56c15feb"
+		},
+		{
+			"binding": "SESSIONS",
+			"id": "fe7c12121eda443092b1b3e0f5e69816"
+		},
+		{
+			"binding": "BLACKLIST",
+			"id": "9d8341289bac44319c1ab75fa8ea0a30"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "production"
+	},
+	"triggers": {
+		"crons": [
+			"0 2 * * *"
+		]
 	}
 }

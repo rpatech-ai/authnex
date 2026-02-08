@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthNex - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { max-width: 420px; width: 100%; }
+    .brand { color: #4a90e2; font-weight: 700; }
+    .alert { font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="text-center mb-4">
+      <h2><i class="bi bi-shield-lock"></i> <span class="brand">AuthNex</span></h2>
+    </div>
+
+    <!-- Login Form -->
+    <div class="card shadow-sm" id="login-card">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-3">Sign In</h5>
+        <div class="alert alert-danger d-none" id="login-error"></div>
+        <form id="loginForm">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" id="login-email" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" id="login-password" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tenant <span class="text-muted">(optional)</span></label>
+            <input type="text" class="form-control" id="login-tenant" placeholder="e.g. system">
+          </div>
+          <button type="submit" class="btn btn-primary w-100" id="login-btn">
+            <i class="bi bi-box-arrow-in-right"></i> Login
+          </button>
+        </form>
+        <hr>
+        <p class="text-muted text-center small mb-0">
+          First time? <a href="#" id="show-setup">Run Setup</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Setup Form (first-time only) -->
+    <div class="card shadow-sm d-none" id="setup-card">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-3"><i class="bi bi-gear"></i> First-Time Setup</h5>
+        <div class="alert alert-info small">Creates your admin account and default tenant. Only works once.</div>
+        <div class="alert alert-danger d-none" id="setup-error"></div>
+        <form id="setupForm">
+          <div class="mb-3">
+            <label class="form-label">Admin Email</label>
+            <input type="email" class="form-control" id="setup-email" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Admin Password</label>
+            <input type="password" class="form-control" id="setup-password" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tenant Name</label>
+            <input type="text" class="form-control" id="setup-tenant-name" value="My Company">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tenant Slug</label>
+            <input type="text" class="form-control" id="setup-tenant-slug" value="my-company" pattern="[a-z0-9-]+">
+          </div>
+          <button type="submit" class="btn btn-success w-100" id="setup-btn">
+            <i class="bi bi-rocket"></i> Initialize System
+          </button>
+        </form>
+        <hr>
+        <p class="text-muted text-center small mb-0">
+          Already set up? <a href="#" id="show-login">Back to Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    // Toggle forms
+    document.getElementById('show-setup').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('login-card').classList.add('d-none');
+      document.getElementById('setup-card').classList.remove('d-none');
+    });
+    document.getElementById('show-login').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('setup-card').classList.add('d-none');
+      document.getElementById('login-card').classList.remove('d-none');
+    });
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const errEl = document.getElementById('login-error');
+      errEl.classList.add('d-none');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Signing in...';
+      try {
+        const result = await api.login(
+          document.getElementById('login-email').value,
+          document.getElementById('login-password').value,
+          document.getElementById('login-tenant').value || null
+        );
+        if (result.tenant?.slug) api.setTenant(result.tenant.slug);
+        window.location.href = 'index.html';
+      } catch (err) {
+        errEl.textContent = err.message; errEl.classList.remove('d-none');
+      } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Login';
+      }
+    });
+
+    // Setup
+    document.getElementById('setupForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('setup-btn');
+      const errEl = document.getElementById('setup-error');
+      errEl.classList.add('d-none');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Initializing...';
+      try {
+        await api.setup(
+          document.getElementById('setup-email').value,
+          document.getElementById('setup-password').value,
+          document.getElementById('setup-tenant-name').value,
+          document.getElementById('setup-tenant-slug').value
+        );
+        alert('✅ Setup complete! You can now login.');
+        document.getElementById('setup-card').classList.add('d-none');
+        document.getElementById('login-card').classList.remove('d-none');
+        document.getElementById('login-email').value = document.getElementById('setup-email').value;
+      } catch (err) {
+        errEl.textContent = err.message; errEl.classList.remove('d-none');
+      } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-rocket"></i> Initialize System';
+      }
+    });
+
+    // Redirect if already logged in
+    if (localStorage.getItem('authToken')) window.location.href = 'index.html';
+  </script>
+</body>
+</html>

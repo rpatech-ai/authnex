@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthNex Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+  <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('show')"><i class="bi bi-list"></i></button>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="logo"><i class="bi bi-shield-lock"></i> AuthNex</div>
+    <div class="nav flex-column">
+      <a href="#dashboard" class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="#users" class="nav-link" data-page="users"><i class="bi bi-people"></i> Users</a>
+      <a href="#tenants" class="nav-link" data-page="tenants"><i class="bi bi-building"></i> Tenants</a>
+      <a href="#roles" class="nav-link" data-page="roles"><i class="bi bi-key"></i> Roles</a>
+      <a href="#apikeys" class="nav-link" data-page="apikeys"><i class="bi bi-code-square"></i> API Keys</a>
+      <a href="#audit" class="nav-link" data-page="audit"><i class="bi bi-journal-text"></i> Audit Logs</a>
+      <a href="#settings" class="nav-link" data-page="settings"><i class="bi bi-gear"></i> Settings</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="top-bar">
+      <h4 class="mb-0" id="page-title">Dashboard</h4>
+      <div class="d-flex align-items-center gap-3">
+        <select class="form-select form-select-sm" id="tenant-selector" style="width:200px" onchange="api.setTenant(this.value);loadCurrentPage()">
+          <option value="">All Tenants</option>
+        </select>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle"></i> <span id="user-email">Admin</span>
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="selfExport()"><i class="bi bi-download"></i> Export My Data</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4" id="content">
+      <!-- Dashboard -->
+      <div id="dashboard-page" class="page">
+        <div class="row g-4 mb-4">
+          <div class="col-md-3"><div class="stats-card"><div class="text-muted">Total Users</div><div class="stats-number" id="stat-users">0</div></div></div>
+          <div class="col-md-3"><div class="stats-card"><div class="text-muted">Active (30d)</div><div class="stats-number" id="stat-active">0</div></div></div>
+          <div class="col-md-3"><div class="stats-card"><div class="text-muted">Logins (30d)</div><div class="stats-number" id="stat-logins">0</div></div></div>
+          <div class="col-md-3"><div class="stats-card"><div class="text-muted">Tenants</div><div class="stats-number" id="stat-tenants">0</div></div></div>
+        </div>
+        <div class="data-table p-4">
+          <h5 class="mb-3">Recent Activity</h5>
+          <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Status</th></tr></thead>
+          <tbody id="recent-activity"><tr><td colspan="4" class="text-center text-muted">Loading...</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div id="users-page" class="page d-none">
+        <div class="data-table p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Users</h5>
+            <div class="d-flex gap-2">
+              <input type="search" class="form-control form-control-sm" placeholder="Search..." id="user-search" style="width:180px" onkeyup="if(event.key==='Enter')loadUsers()">
+              <button class="btn btn-sm btn-outline-secondary" onclick="bulkExport()"><i class="bi bi-download"></i> Export</button>
+              <button class="btn btn-sm btn-primary" onclick="showModal('userModal')"><i class="bi bi-plus"></i> New</button>
+            </div>
+          </div>
+          <div class="table-responsive"><table class="table"><thead><tr><th>Email</th><th>Status</th><th>Verified</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="users-table"></tbody></table></div>
+          <nav><ul class="pagination pagination-sm" id="users-pagination"></ul></nav>
+        </div>
+      </div>
+
+      <!-- Tenants -->
+      <div id="tenants-page" class="page d-none">
+        <div class="data-table p-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h5 class="mb-0">Tenants</h5>
+            <button class="btn btn-sm btn-primary" onclick="showModal('tenantModal')"><i class="bi bi-plus"></i> New</button>
+          </div>
+          <div class="table-responsive"><table class="table"><thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Plan</th><th>Created</th></tr></thead>
+          <tbody id="tenants-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- Roles -->
+      <div id="roles-page" class="page d-none">
+        <div class="data-table p-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h5 class="mb-0">Roles</h5>
+            <button class="btn btn-sm btn-primary" onclick="showModal('roleModal')"><i class="bi bi-plus"></i> New Role</button>
+          </div>
+          <div class="table-responsive"><table class="table"><thead><tr><th>Name</th><th>Permissions</th><th>System</th><th>Created</th></tr></thead>
+          <tbody id="roles-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- API Keys -->
+      <div id="apikeys-page" class="page d-none">
+        <div class="data-table p-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h5 class="mb-0">API Keys</h5>
+            <button class="btn btn-sm btn-primary" onclick="showModal('apikeyModal')"><i class="bi bi-plus"></i> New Key</button>
+          </div>
+          <div class="alert alert-warning d-none" id="new-key-alert">
+            <strong>New API Key Created!</strong> Copy it now — it won't be shown again:<br>
+            <div class="key-reveal mt-2" id="new-key-value"></div>
+            <button class="btn btn-sm btn-outline-secondary mt-2" onclick="navigator.clipboard.writeText(document.getElementById('new-key-value').textContent)"><i class="bi bi-clipboard"></i> Copy</button>
+          </div>
+          <div class="table-responsive"><table class="table"><thead><tr><th>Name</th><th>Permissions</th><th>Rate Limit</th><th>Last Used</th><th>Expires</th><th>Actions</th></tr></thead>
+          <tbody id="apikeys-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- Audit Logs -->
+      <div id="audit-page" class="page d-none">
+        <div class="data-table p-4">
+          <h5 class="mb-3">Audit Logs</h5>
+          <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Resource</th><th>IP</th><th>Status</th></tr></thead>
+          <tbody id="audit-table"></tbody></table></div>
+          <nav><ul class="pagination pagination-sm" id="audit-pagination"></ul></nav>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div id="settings-page" class="page d-none">
+        <div class="data-table p-4">
+          <h5 class="mb-3">Account Settings</h5>
+          <form id="passwordForm" class="mb-4" style="max-width:400px">
+            <h6>Change Password</h6>
+            <div class="mb-2"><input type="password" class="form-control form-control-sm" id="current-pw" placeholder="Current password" required></div>
+            <div class="mb-2"><input type="password" class="form-control form-control-sm" id="new-pw" placeholder="New password" required></div>
+            <button type="submit" class="btn btn-sm btn-primary">Update Password</button>
+          </form>
+          <hr>
+          <h6>Data Export (GDPR)</h6>
+          <p class="text-muted small">Download all your personal data.</p>
+          <button class="btn btn-sm btn-outline-secondary" onclick="selfExport()"><i class="bi bi-download"></i> Export My Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Modal -->
+  <div class="modal fade" id="userModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Create User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="u-email" required></div>
+      <div class="mb-3"><label class="form-label">Password</label><input type="password" class="form-control" id="u-password" required></div>
+      <div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="u-status"><option value="active">Active</option><option value="pending">Pending</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveUser()">Save</button></div>
+  </div></div></div>
+
+  <!-- Tenant Modal -->
+  <div class="modal fade" id="tenantModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Create Tenant</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="t-name" required></div>
+      <div class="mb-3"><label class="form-label">Slug</label><input type="text" class="form-control" id="t-slug" pattern="[a-z0-9-]+" required></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveTenant()">Save</button></div>
+  </div></div></div>
+
+  <!-- Role Modal -->
+  <div class="modal fade" id="roleModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Create Role</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="r-name" required></div>
+      <div class="mb-3"><label class="form-label">Permissions <span class="text-muted small">(comma-separated)</span></label><input type="text" class="form-control" id="r-perms" placeholder="read:*, update:own"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveRole()">Save</button></div>
+  </div></div></div>
+
+  <!-- API Key Modal -->
+  <div class="modal fade" id="apikeyModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Create API Key</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="ak-name" required></div>
+      <div class="mb-3"><label class="form-label">Permissions <span class="text-muted small">(comma-separated)</span></label><input type="text" class="form-control" id="ak-perms" placeholder="read:*"></div>
+      <div class="mb-3"><label class="form-label">Expires in (days)</label><input type="number" class="form-control" id="ak-days" value="90"></div>
+      <div class="mb-3"><label class="form-label">Rate Limit (req/hr)</label><input type="number" class="form-control" id="ak-rate" value="1000"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveApiKey()">Save</button></div>
+  </div></div></div>
+
+  <!-- Sessions Modal -->
+  <div class="modal fade" id="sessionsModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Active Sessions</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>IP</th><th>User Agent</th><th>Last Activity</th><th>Actions</th></tr></thead>
+    <tbody id="sessions-table"></tbody></table></div></div>
+  </div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="api.js"></script>
+  <script>
+    let currentPage = 'dashboard';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('authToken')) { window.location.href = 'login.html'; return; }
+      setupNav(); loadTenantSelector(); loadDashboard();
+      // Load profile email
+      api.getProfile().then(r => { if(r.user) document.getElementById('user-email').textContent = r.user.email; }).catch(()=>{});
+    });
+
+    function setupNav() {
+      document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', e => {
+        e.preventDefault(); navigateTo(l.dataset.page);
+      }));
+    }
+
+    function navigateTo(page) {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.add('d-none'));
+      const el = document.getElementById(`${page}-page`);
+      if (el) { el.classList.remove('d-none'); document.getElementById('page-title').textContent = page.charAt(0).toUpperCase() + page.slice(1); }
+      currentPage = page; loadCurrentPage();
+    }
+
+    function loadCurrentPage() {
+      switch(currentPage) {
+        case 'dashboard': loadDashboard(); break;
+        case 'users': loadUsers(); break;
+        case 'tenants': loadTenantsList(); break;
+        case 'roles': loadRoles(); break;
+        case 'apikeys': loadApiKeys(); break;
+        case 'audit': loadAuditLogs(); break;
+      }
+    }
+
+    function showModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+    function hideModal(id) { bootstrap.Modal.getInstance(document.getElementById(id))?.hide(); }
+    function toast(msg, type='success') { alert(msg); } // Simple fallback
+
+    // Dashboard
+    async function loadDashboard() {
+      try {
+        const s = await api.getStats();
+        document.getElementById('stat-users').textContent = s.users || 0;
+        document.getElementById('stat-active').textContent = s.activeUsers || 0;
+        document.getElementById('stat-logins').textContent = s.logins || 0;
+        document.getElementById('stat-tenants').textContent = s.tenants || 0;
+        const logs = await api.getAuditLogs({ limit: 5 });
+        document.getElementById('recent-activity').innerHTML = (logs.items||[]).map(l => `
+          <tr><td>${new Date(l.created_at).toLocaleString()}</td><td>${l.user_id||'-'}</td><td>${l.action}</td>
+          <td><span class="badge bg-${l.success?'success':'danger'}">${l.success?'OK':'Fail'}</span></td></tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">No activity</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+
+    // Users
+    async function loadUsers(page=1) {
+      try {
+        const search = document.getElementById('user-search').value;
+        const r = await api.getUsers({ page, search });
+        document.getElementById('users-table').innerHTML = (r.items||[]).map(u => `
+          <tr><td>${u.email}</td>
+          <td><span class="badge-status status-${u.status}">${u.status}</span></td>
+          <td>${u.email_verified?'<i class="bi bi-check-circle text-success"></i>':'<i class="bi bi-x-circle text-danger"></i>'}</td>
+          <td>${new Date(u.created_at).toLocaleDateString()}</td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-info" onclick="viewSessions(${u.id})" title="Sessions"><i class="bi bi-display"></i></button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportUser(${u.id})" title="GDPR Export"><i class="bi bi-download"></i></button>
+            <button class="btn btn-sm btn-outline-dark" onclick="forceReset(${u.id})" title="Force Reset"><i class="bi bi-arrow-repeat"></i></button>
+            ${u.status==='locked'?`<button class="btn btn-sm btn-outline-success" onclick="unlockU(${u.id})" title="Unlock"><i class="bi bi-unlock"></i></button>`
+              :`<button class="btn btn-sm btn-outline-warning" onclick="lockU(${u.id})" title="Lock"><i class="bi bi-lock"></i></button>`}
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteU(${u.id})" title="Delete"><i class="bi bi-trash"></i></button>
+          </td></tr>`).join('') || '<tr><td colspan="5" class="text-muted text-center">No users</td></tr>';
+        renderPagination('users-pagination', r, loadUsers);
+      } catch(e) { console.error(e); }
+    }
+
+    async function saveUser() {
+      try {
+        await api.createUser({ email: ge('u-email'), password: ge('u-password'), status: ge('u-status') });
+        hideModal('userModal'); loadUsers();
+      } catch(e) { alert(e.message); }
+    }
+    async function lockU(id) { if(confirm('Lock user?')) { await api.lockUser(id,'Admin lock'); loadUsers(); } }
+    async function unlockU(id) { await api.unlockUser(id); loadUsers(); }
+    async function deleteU(id) { if(confirm('Delete user?')) { await api.deleteUser(id); loadUsers(); } }
+    async function forceReset(id) { if(confirm('Force password reset?')) { await api.forcePasswordReset(id); loadUsers(); toast('Password reset forced'); } }
+    async function exportUser(id) {
+      try { const data = await api.exportUserData(id); downloadJSON(data, `user-${id}-export.json`); } catch(e) { alert(e.message); }
+    }
+    async function bulkExport() {
+      try { const data = await api.bulkExportUsers(); downloadJSON(data, 'users-export.json'); } catch(e) { alert(e.message); }
+    }
+    async function selfExport() {
+      try { const data = await api.selfExport(); downloadJSON(data, 'my-data-export.json'); } catch(e) { alert(e.message); }
+    }
+
+    // Sessions
+    async function viewSessions(userId) {
+      try {
+        const r = await api.getUserSessions(userId);
+        document.getElementById('sessions-table').innerHTML = (r.sessions||[]).map(s => `
+          <tr><td>${s.ip_address||'-'}</td><td class="text-truncate" style="max-width:250px">${s.user_agent||'-'}</td>
+          <td>${new Date(s.last_activity).toLocaleString()}</td>
+          <td><button class="btn btn-sm btn-outline-danger" onclick="revokeSession(${userId},'${s.id}')"><i class="bi bi-x-circle"></i> Revoke</button></td></tr>`
+        ).join('') || '<tr><td colspan="4" class="text-muted text-center">No active sessions</td></tr>';
+        showModal('sessionsModal');
+      } catch(e) { alert(e.message); }
+    }
+    async function revokeSession(userId, sid) { await api.revokeSession(userId, sid); viewSessions(userId); }
+
+    // Tenants
+    async function loadTenantsList() {
+      try {
+        const r = await api.getTenants();
+        document.getElementById('tenants-table').innerHTML = (r.tenants||r||[]).map(t => `
+          <tr><td>${t.name}</td><td><code>${t.slug}</code></td>
+          <td><span class="badge-status status-${t.status}">${t.status}</span></td>
+          <td>${t.plan||'free'}</td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('');
+      } catch(e) { console.error(e); }
+    }
+    async function loadTenantSelector() {
+      try {
+        const r = await api.getTenants();
+        const sel = document.getElementById('tenant-selector');
+        sel.innerHTML = '<option value="">All Tenants</option>' + (r.tenants||r||[]).map(t => `<option value="${t.slug}" ${t.slug===api.tenantSlug?'selected':''}>${t.name}</option>`).join('');
+      } catch(e) { console.error(e); }
+    }
+    async function saveTenant() {
+      try {
+        await api.createTenant({ name: ge('t-name'), slug: ge('t-slug') });
+        hideModal('tenantModal'); loadTenantsList(); loadTenantSelector();
+      } catch(e) { alert(e.message); }
+    }
+
+    // Roles
+    async function loadRoles() {
+      try {
+        const r = await api.getRoles();
+        document.getElementById('roles-table').innerHTML = (r.roles||r||[]).map(role => `
+          <tr><td><strong>${role.name}</strong></td>
+          <td>${(role.permissions||[]).map(p=>`<span class="badge bg-secondary me-1">${p}</span>`).join('')}</td>
+          <td>${role.is_system?'<i class="bi bi-check text-success"></i>':''}</td>
+          <td>${new Date(role.created_at).toLocaleDateString()}</td></tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">No roles</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+    async function saveRole() {
+      try {
+        const perms = ge('r-perms').split(',').map(s=>s.trim()).filter(Boolean);
+        await api.createRole({ name: ge('r-name'), permissions: perms });
+        hideModal('roleModal'); loadRoles();
+      } catch(e) { alert(e.message); }
+    }
+
+    // API Keys
+    async function loadApiKeys() {
+      try {
+        document.getElementById('new-key-alert').classList.add('d-none');
+        const r = await api.getApiKeys();
+        document.getElementById('apikeys-table').innerHTML = (r.api_keys||r||[]).map(k => `
+          <tr><td>${k.name}</td>
+          <td>${(Array.isArray(k.permissions)?k.permissions:JSON.parse(k.permissions||'[]')).map(p=>`<span class="badge bg-secondary me-1">${p}</span>`).join('')||'none'}</td>
+          <td>${k.rate_limit}/hr</td>
+          <td>${k.last_used_at?new Date(k.last_used_at).toLocaleString():'Never'}</td>
+          <td>${k.expires_at?new Date(k.expires_at).toLocaleDateString():'Never'}</td>
+          <td>${k.revoked_at?'<span class="badge bg-danger">Revoked</span>':`<button class="btn btn-sm btn-outline-danger" onclick="revokeKey('${k.id}')"><i class="bi bi-x-circle"></i></button>`}</td></tr>`
+        ).join('') || '<tr><td colspan="6" class="text-muted text-center">No API keys</td></tr>';
+      } catch(e) { console.error(e); }
+    }
+    async function saveApiKey() {
+      try {
+        const perms = ge('ak-perms').split(',').map(s=>s.trim()).filter(Boolean);
+        const r = await api.createApiKey({ name: ge('ak-name'), permissions: perms, expires_in_days: parseInt(ge('ak-days'))||90, rate_limit: parseInt(ge('ak-rate'))||1000 });
+        hideModal('apikeyModal');
+        document.getElementById('new-key-value').textContent = r.raw_key;
+        document.getElementById('new-key-alert').classList.remove('d-none');
+        loadApiKeys();
+      } catch(e) { alert(e.message); }
+    }
+    async function revokeKey(id) { if(confirm('Revoke this key?')) { await api.revokeApiKey(id); loadApiKeys(); } }
+
+    // Audit
+    async function loadAuditLogs(page=1) {
+      try {
+        const r = await api.getAuditLogs({ page, limit: 20 });
+        document.getElementById('audit-table').innerHTML = (r.items||[]).map(l => `
+          <tr><td>${new Date(l.created_at).toLocaleString()}</td><td>${l.user_id||'-'}</td><td>${l.action}</td>
+          <td>${l.resource_type||'-'}</td><td>${l.ip_address||'-'}</td>
+          <td><span class="badge bg-${l.success?'success':'danger'}">${l.success?'OK':'Fail'}</span></td></tr>`).join('');
+        renderPagination('audit-pagination', r, loadAuditLogs);
+      } catch(e) { console.error(e); }
+    }
+
+    // Settings - Change Password
+    document.getElementById('passwordForm')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        await api.changePassword(ge('current-pw'), ge('new-pw'));
+        alert('Password updated!'); e.target.reset();
+      } catch(err) { alert(err.message); }
+    });
+
+    // Helpers
+    function ge(id) { return document.getElementById(id).value; }
+    function renderPagination(elId, data, cb) {
+      const el = document.getElementById(elId);
+      if (!data.pages || data.pages <= 1) { el.innerHTML = ''; return; }
+      el.innerHTML = Array.from({length:data.pages},(_,i)=>i+1).map(i=>
+        `<li class="page-item ${i===data.page?'active':''}"><a class="page-link" href="#" onclick="event.preventDefault();${cb.name}(${i})">${i}</a></li>`).join('');
+    }
+    function downloadJSON(data, filename) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    }
+    async function doLogout() { await api.logout(); window.location.href = 'login.html'; }
+  </script>
+</body>
+</html>
