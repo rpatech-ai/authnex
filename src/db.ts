@@ -131,7 +131,7 @@ export class Database {
   async assignRole(userId: number, tenantId: number, roleId: number, grantedBy?: number): Promise<void> {
     await this.env.DB.prepare(
       `INSERT OR REPLACE INTO user_roles (user_id, tenant_id, role_id, granted_by) VALUES (?, ?, ?, ?)`
-    ).bind(userId, tenantId, roleId, grantedBy).run();
+    ).bind(userId, tenantId, roleId, grantedBy ?? null).run();
     await this.env.CACHE.delete(`roles:${userId}:${tenantId}`);
   }
 
