@@ -6,7 +6,7 @@
 class AuthAPI {
   constructor() {
     this.baseUrl = window.location.hostname === 'localhost'
-      ? 'http://localhost:8787/api' : '/api';
+      ? 'http://localhost:8787/api' : 'https://authnex.dev/api';
     this.token = localStorage.getItem('authToken');
     this.tenantSlug = localStorage.getItem('tenantSlug');
   }
