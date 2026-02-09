@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuthNex — Documentation</title>
+  <style>
+    :root { --primary: #3b82f6; --bg: #ffffff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --code-bg: #1e293b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); line-height: 1.6; }
+    .docs-layout { display: flex; min-height: 100vh; }
+    .docs-sidebar { width: 260px; border-right: 1px solid var(--border); padding: 24px 0; position: fixed; height: 100vh; overflow-y: auto; background: #f8fafc; }
+    .docs-sidebar-brand { padding: 0 24px 20px; font-size: 20px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); }
+    .docs-sidebar-nav { padding: 16px 0; }
+    .docs-sidebar-nav a { display: block; padding: 8px 24px; color: var(--muted); text-decoration: none; font-size: 14px; }
+    .docs-sidebar-nav a:hover, .docs-sidebar-nav a.active { color: var(--primary); background: #eff6ff; }
+    .docs-sidebar-nav .section-title { padding: 16px 24px 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+    .docs-content { margin-left: 260px; max-width: 800px; padding: 40px 48px; }
+    .docs-content h1 { font-size: 32px; margin-bottom: 8px; }
+    .docs-content h2 { font-size: 24px; margin-top: 40px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .docs-content h3 { font-size: 18px; margin-top: 28px; margin-bottom: 8px; }
+    .docs-content p { margin-bottom: 16px; color: var(--text); }
+    .docs-content pre { background: var(--code-bg); color: #e2e8f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin-bottom: 20px; font-size: 13px; line-height: 1.5; }
+    .docs-content code { font-family: 'SF Mono', 'Fira Code', monospace; }
+    .docs-content :not(pre) > code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; color: #e11d48; }
+    .docs-content table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .docs-content th, .docs-content td { text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-size: 14px; }
+    .docs-content th { background: #f8fafc; font-weight: 600; }
+    .docs-content ul, .docs-content ol { margin-bottom: 16px; padding-left: 24px; }
+    .docs-content li { margin-bottom: 6px; }
+    .callout { padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    .callout-info { background: #eff6ff; border-left: 4px solid var(--primary); }
+    .callout-warning { background: #fffbeb; border-left: 4px solid #f59e0b; }
+    @media (max-width: 768px) { .docs-sidebar { display: none; } .docs-content { margin-left: 0; padding: 24px; } }
+  </style>
+</head>
+<body>
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="docs-sidebar-brand">AuthNex Docs</div>
+    <nav class="docs-sidebar-nav">
+      <div class="section-title">Getting Started</div>
+      <a href="#quickstart" class="active" data-doc="quickstart">Quick Start (PHP)</a>
+      <a href="#concepts" data-doc="concepts">Core Concepts</a>
+      <div class="section-title">SDKs</div>
+      <a href="#widget" data-doc="widget">JS Login Widget</a>
+      <a href="#php-sdk" data-doc="quickstart">PHP SDK</a>
+      <div class="section-title">Reference</div>
+      <a href="#api" data-doc="api">API Reference</a>
+      <div class="section-title">Advanced</div>
+      <a href="#oidc" data-doc="oidc">OIDC / OAuth2</a>
+      <a href="#social" data-doc="social">Social Login</a>
+      <a href="#2fa" data-doc="2fa">2FA / Passkeys</a>
+    </nav>
+  </aside>
+  <main class="docs-content" id="docs-content">
+    <div id="doc-loading">Loading documentation...</div>
+  </main>
+</div>
+
+<script>
+  const docs = {};
+
+  // Load markdown files and render
+  const docFiles = {
+    quickstart: 'quickstart.md',
+    concepts: 'concepts.md',
+    widget: 'widget-guide.md',
+    api: 'api-reference.md',
+  };
+
+  async function loadDoc(name) {
+    if (docs[name]) { renderDoc(docs[name]); return; }
+    const file = docFiles[name];
+    if (!file) { document.getElementById('docs-content').innerHTML = '<h1>Coming Soon</h1><p>This section is under development.</p>'; return; }
+    try {
+      const resp = await fetch(file);
+      const text = await resp.text();
+      docs[name] = text;
+      renderDoc(text);
+    } catch {
+      document.getElementById('docs-content').innerHTML = '<h1>Error</h1><p>Failed to load documentation.</p>';
+    }
+  }
+
+  function renderDoc(markdown) {
+    // Simple markdown to HTML renderer
+    let html = markdown
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${code.replace(/</g, '&lt;')}</code></pre>`)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^\| (.+)$/gm, (line) => {
+        const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
+        if (cells.every(c => /^-+$/.test(c))) return '';
+        return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+      })
+      .replace(/(<tr>[\s\S]*?<\/tr>\n?)+/g, (table) => `<table>${table}</table>`)
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, (list) => `<ul>${list}</ul>`)
+      .replace(/^\> \*\*(.+?)\*\*: (.+)$/gm, '<div class="callout callout-info"><strong>$1:</strong> $2</div>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(?!<[huptdlo])/gm, '');
+
+    document.getElementById('docs-content').innerHTML = `<p>${html}</p>`;
+  }
+
+  // Navigation
+  document.querySelectorAll('.docs-sidebar-nav a[data-doc]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.docs-sidebar-nav a').forEach(n => n.classList.remove('active'));
+      a.classList.add('active');
+      loadDoc(a.dataset.doc);
+    });
+  });
+
+  // Init
+  loadDoc('quickstart');
+</script>
+</body>
+</html>

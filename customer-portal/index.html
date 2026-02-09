@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuthNex — Customer Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+</head>
+<body>
+
+<!-- Login / Signup View -->
+<div id="auth-view" style="display:none">
+  <div style="max-width:420px;margin:80px auto;padding:32px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <h2 style="text-align:center;margin-bottom:4px" id="auth-title">Sign In to Your Portal</h2>
+    <p style="text-align:center;color:#64748b;margin-bottom:24px" id="auth-subtitle">Manage your AuthNex tenant</p>
+    <div id="auth-error" style="display:none;padding:10px 14px;background:#fef2f2;color:#dc2626;border-radius:8px;margin-bottom:16px;font-size:13px"></div>
+    <div id="auth-success" style="display:none;padding:10px 14px;background:#f0fdf4;color:#16a34a;border-radius:8px;margin-bottom:16px;font-size:13px"></div>
+
+    <!-- Login Form -->
+    <form id="login-form">
+      <div class="authnex-form-group" style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Email</label>
+        <input type="email" id="login-email" required placeholder="you@company.com" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Password</label>
+        <input type="password" id="login-password" required placeholder="Enter your password" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <button type="submit" class="cp-btn cp-btn-primary" style="width:100%;padding:12px;font-size:15px;border-radius:8px">Sign In</button>
+    </form>
+
+    <!-- Signup Form (hidden by default) -->
+    <form id="signup-form" style="display:none">
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Email</label>
+        <input type="email" id="signup-email" required placeholder="you@company.com" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Password</label>
+        <input type="password" id="signup-password" required placeholder="Min 8 chars, mixed case + number" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Company Name</label>
+        <input type="text" id="signup-company" required placeholder="Acme Corp" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Tenant Slug</label>
+        <input type="text" id="signup-slug" required placeholder="acme-corp" pattern="[a-z0-9][a-z0-9-]{1,48}[a-z0-9]" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+        <small id="slug-status" style="color:#64748b;font-size:12px"></small>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Plan</label>
+        <select id="signup-plan" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px">
+          <option value="free">Free — 50 users, 5K API calls/mo</option>
+          <option value="starter">Starter ($29/mo) — 500 users, 50K API calls/mo</option>
+          <option value="pro">Pro ($99/mo) — 5,000 users, 500K API calls/mo</option>
+        </select>
+      </div>
+      <button type="submit" class="cp-btn cp-btn-primary" style="width:100%;padding:12px;font-size:15px;border-radius:8px">Create Account</button>
+    </form>
+
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:#64748b">
+      <span id="auth-toggle-text">Don't have an account?</span>
+      <a href="#" id="auth-toggle" style="color:#3b82f6">Sign up</a>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard View -->
+<div id="dashboard-view" style="display:none">
+  <div class="cp-layout">
+    <aside class="cp-sidebar">
+      <div class="cp-sidebar-brand">AuthNex</div>
+      <nav class="cp-sidebar-nav">
+        <a href="#dashboard" class="active" data-page="dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="#users" data-page="users"><i class="bi bi-people"></i> Users</a>
+        <a href="#api-keys" data-page="api-keys"><i class="bi bi-key"></i> API Keys</a>
+        <a href="#usage" data-page="usage"><i class="bi bi-graph-up"></i> Usage</a>
+        <a href="#settings" data-page="settings"><i class="bi bi-gear"></i> Settings</a>
+        <a href="#" id="logout-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
+      </nav>
+    </aside>
+    <main class="cp-main">
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="cp-page">
+        <div class="cp-header"><h1>Dashboard</h1></div>
+        <div class="cp-cards" id="dashboard-cards"></div>
+        <div class="cp-card" style="margin-top:16px">
+          <h3 style="margin-bottom:12px;font-size:16px">Quick Start</h3>
+          <p style="font-size:14px;color:#64748b;margin-bottom:12px">Integrate AuthNex in your application:</p>
+          <pre id="quickstart-code" style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px"></pre>
+        </div>
+      </div>
+
+      <!-- Users Page -->
+      <div id="page-users" class="cp-page" style="display:none">
+        <div class="cp-header">
+          <h1>Users</h1>
+          <input type="text" id="user-search" placeholder="Search by email..." style="padding:8px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;width:280px" />
+        </div>
+        <div class="cp-table-wrapper">
+          <table class="cp-table">
+            <thead>
+              <tr><th>Email</th><th>Status</th><th>Verified</th><th>Joined</th></tr>
+            </thead>
+            <tbody id="users-table-body"></tbody>
+          </table>
+        </div>
+        <div id="users-pagination" style="margin-top:16px;text-align:center"></div>
+      </div>
+
+      <!-- API Keys Page -->
+      <div id="page-api-keys" class="cp-page" style="display:none">
+        <div class="cp-header">
+          <h1>API Keys</h1>
+          <button class="cp-btn cp-btn-primary" onclick="showCreateKeyModal()"><i class="bi bi-plus"></i> Create Key</button>
+        </div>
+        <div id="new-key-alert" style="display:none;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:16px">
+          <strong>New API Key Created!</strong> Copy it now — it won't be shown again:
+          <code id="new-key-value" style="display:block;margin-top:8px;padding:8px;background:#1e293b;color:#4ade80;border-radius:4px;word-break:break-all"></code>
+        </div>
+        <div class="cp-table-wrapper">
+          <table class="cp-table">
+            <thead>
+              <tr><th>Name</th><th>Permissions</th><th>Created</th><th>Last Used</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="keys-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Usage Page -->
+      <div id="page-usage" class="cp-page" style="display:none">
+        <div class="cp-header"><h1>Usage</h1></div>
+        <div class="cp-cards" id="usage-cards"></div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="page-settings" class="cp-page" style="display:none">
+        <div class="cp-header"><h1>Settings</h1></div>
+        <div class="cp-card">
+          <h3 style="margin-bottom:16px">Account Information</h3>
+          <div id="settings-info"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Create Key Modal -->
+<div id="create-key-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;width:90%">
+    <h3 style="margin-bottom:16px">Create API Key</h3>
+    <form id="create-key-form">
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Name</label>
+        <input type="text" id="key-name" required placeholder="e.g. Production Backend" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:500">Expires In (days)</label>
+        <input type="number" id="key-expires" value="365" min="1" max="3650" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:14px" />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="cp-btn" onclick="hideCreateKeyModal()" style="background:#e2e8f0">Cancel</button>
+        <button type="submit" class="cp-btn cp-btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  // Router
+  let currentPage = 'dashboard';
+
+  function navigate(page) {
+    document.querySelectorAll('.cp-page').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.cp-sidebar-nav a[data-page]').forEach(a => a.classList.remove('active'));
+    const pageEl = document.getElementById(`page-${page}`);
+    const navEl = document.querySelector(`.cp-sidebar-nav a[data-page="${page}"]`);
+    if (pageEl) pageEl.style.display = 'block';
+    if (navEl) navEl.classList.add('active');
+    currentPage = page;
+    loadPageData(page);
+  }
+
+  // Navigation
+  document.querySelectorAll('.cp-sidebar-nav a[data-page]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = a.dataset.page;
+    });
+  });
+
+  // Hash routing
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.slice(1) || 'dashboard';
+    if (hash === 'login' || hash === 'signup') {
+      showAuth(hash === 'signup');
+    } else if (portalApi.isAuthenticated()) {
+      showDashboard();
+      navigate(hash);
+    } else {
+      showAuth(false);
+    }
+  });
+
+  // Auth toggle
+  let isSignup = false;
+  document.getElementById('auth-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    isSignup = !isSignup;
+    showAuth(isSignup);
+  });
+
+  function showAuth(signup) {
+    isSignup = signup;
+    document.getElementById('auth-view').style.display = 'block';
+    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('login-form').style.display = signup ? 'none' : 'block';
+    document.getElementById('signup-form').style.display = signup ? 'block' : 'none';
+    document.getElementById('auth-title').textContent = signup ? 'Create Your Account' : 'Sign In to Your Portal';
+    document.getElementById('auth-subtitle').textContent = signup ? 'Start your 14-day free trial' : 'Manage your AuthNex tenant';
+    document.getElementById('auth-toggle-text').textContent = signup ? 'Already have an account?' : "Don't have an account?";
+    document.getElementById('auth-toggle').textContent = signup ? 'Sign in' : 'Sign up';
+    hideAuthMessages();
+  }
+
+  function showDashboard() {
+    document.getElementById('auth-view').style.display = 'none';
+    document.getElementById('dashboard-view').style.display = 'block';
+  }
+
+  function hideAuthMessages() {
+    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('auth-success').style.display = 'none';
+  }
+
+  function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg; el.style.display = 'block';
+  }
+
+  // Login
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAuthMessages();
+    try {
+      const data = await portalApi.login(
+        document.getElementById('login-email').value,
+        document.getElementById('login-password').value
+      );
+      portalApi.setTokens(data.access_token, data.refresh_token, data.tenant?.slug || portalApi.tenant);
+      showDashboard();
+      navigate('dashboard');
+    } catch (err) {
+      showAuthError(err.message);
+    }
+  });
+
+  // Signup
+  document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAuthMessages();
+    try {
+      const data = await portalApi.signup(
+        document.getElementById('signup-email').value,
+        document.getElementById('signup-password').value,
+        document.getElementById('signup-company').value,
+        document.getElementById('signup-slug').value,
+        document.getElementById('signup-plan').value
+      );
+      portalApi.setTokens(data.access_token, data.refresh_token, data.tenant?.slug);
+      showDashboard();
+      navigate('dashboard');
+    } catch (err) {
+      showAuthError(err.message);
+    }
+  });
+
+  // Slug availability check
+  let slugTimer;
+  document.getElementById('signup-slug')?.addEventListener('input', (e) => {
+    clearTimeout(slugTimer);
+    const slug = e.target.value;
+    const status = document.getElementById('slug-status');
+    if (slug.length < 3) { status.textContent = ''; return; }
+    slugTimer = setTimeout(async () => {
+      try {
+        const result = await portalApi.checkSlug(slug);
+        status.textContent = result.available ? 'Available' : 'Already taken';
+        status.style.color = result.available ? '#16a34a' : '#dc2626';
+      } catch { status.textContent = ''; }
+    }, 500);
+  });
+
+  // Logout
+  document.getElementById('logout-link').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await portalApi.logout();
+    window.location.hash = '#login';
+    showAuth(false);
+  });
+
+  // Page data loaders
+  async function loadPageData(page) {
+    try {
+      switch (page) {
+        case 'dashboard': await loadDashboard(); break;
+        case 'users': await loadUsers(); break;
+        case 'api-keys': await loadApiKeys(); break;
+        case 'usage': await loadUsage(); break;
+        case 'settings': loadSettings(); break;
+      }
+    } catch (err) {
+      console.error('Failed to load page:', err);
+    }
+  }
+
+  async function loadDashboard() {
+    const data = await portalApi.getDashboard();
+    const cards = document.getElementById('dashboard-cards');
+    const usagePct = data.usage.limit > 0 ? Math.min(100, (data.usage.api_calls / data.usage.limit) * 100) : 0;
+    const barClass = usagePct > 90 ? 'danger' : usagePct > 70 ? 'warning' : '';
+    cards.innerHTML = `
+      <div class="cp-card">
+        <div class="cp-card-label">Total Users</div>
+        <div class="cp-card-value">${data.users.total}</div>
+        <div class="cp-card-detail">${data.users.limit > 0 ? `of ${data.users.limit} limit` : 'Unlimited'}</div>
+      </div>
+      <div class="cp-card">
+        <div class="cp-card-label">API Calls This Month</div>
+        <div class="cp-card-value">${data.usage.api_calls.toLocaleString()}</div>
+        <div class="cp-card-detail">${data.usage.limit > 0 ? `of ${data.usage.limit.toLocaleString()} limit` : 'Unlimited'}</div>
+        <div class="cp-progress-bar"><div class="cp-progress-fill ${barClass}" style="width:${usagePct}%"></div></div>
+      </div>
+      <div class="cp-card">
+        <div class="cp-card-label">Logins (30 days)</div>
+        <div class="cp-card-value">${data.recent_logins_30d}</div>
+      </div>
+      <div class="cp-card">
+        <div class="cp-card-label">Plan</div>
+        <div class="cp-card-value" style="font-size:20px">${data.plan.display_name}</div>
+        <div class="cp-card-detail"><span class="cp-badge cp-badge-${data.plan.status}">${data.plan.status}</span></div>
+      </div>
+    `;
+
+    const tenant = portalApi.tenant || 'your-tenant';
+    document.getElementById('quickstart-code').textContent =
+`# PHP SDK
+composer require authnex/php-sdk
+
+$auth = new AuthNex([
+  'api_url' => '${window.location.origin}',
+  'tenant'  => '${tenant}',
+  'api_key' => 'YOUR_API_KEY',
+]);
+$auth->protect();
+$user = $auth->getUser();`;
+  }
+
+  let usersPage = 1;
+  async function loadUsers(page = 1, search = '') {
+    usersPage = page;
+    const data = await portalApi.getUsers(page, 20, search);
+    const tbody = document.getElementById('users-table-body');
+    tbody.innerHTML = data.items.map(u => `
+      <tr>
+        <td>${u.email}</td>
+        <td><span class="cp-badge cp-badge-${u.status}">${u.status}</span></td>
+        <td>${u.email_verified ? 'Yes' : 'No'}</td>
+        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+      </tr>`).join('');
+    const pag = document.getElementById('users-pagination');
+    pag.innerHTML = `Page ${data.page} of ${data.pages}` +
+      (data.page > 1 ? ` <a href="#" onclick="loadUsers(${data.page - 1},'${search}');return false">Prev</a>` : '') +
+      (data.page < data.pages ? ` <a href="#" onclick="loadUsers(${data.page + 1},'${search}');return false">Next</a>` : '');
+  }
+
+  document.getElementById('user-search')?.addEventListener('input', (e) => {
+    clearTimeout(e.target._timer);
+    e.target._timer = setTimeout(() => loadUsers(1, e.target.value), 400);
+  });
+
+  async function loadApiKeys() {
+    const data = await portalApi.getApiKeys();
+    const tbody = document.getElementById('keys-table-body');
+    const keys = data.api_keys || data;
+    tbody.innerHTML = keys.map(k => `
+      <tr>
+        <td>${k.name}</td>
+        <td>${(Array.isArray(k.permissions) ? k.permissions : JSON.parse(k.permissions || '[]')).join(', ') || 'none'}</td>
+        <td>${new Date(k.created_at).toLocaleDateString()}</td>
+        <td>${k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}</td>
+        <td>${k.revoked_at ? '<span class="cp-badge" style="background:#fee2e2;color:#991b1b">Revoked</span>' :
+          `<button class="cp-btn cp-btn-sm" style="background:#fee2e2;color:#991b1b" onclick="revokeKey('${k.id}')">Revoke</button>`}</td>
+      </tr>`).join('');
+  }
+
+  async function loadUsage() {
+    const data = await portalApi.getUsage();
+    const cards = document.getElementById('usage-cards');
+    cards.innerHTML = `
+      <div class="cp-card"><div class="cp-card-label">API Calls</div><div class="cp-card-value">${(data.api_calls || 0).toLocaleString()}</div><div class="cp-card-detail">This month (${data.period})</div></div>
+      <div class="cp-card"><div class="cp-card-label">Logins</div><div class="cp-card-value">${(data.logins || 0).toLocaleString()}</div><div class="cp-card-detail">This month</div></div>
+      <div class="cp-card"><div class="cp-card-label">Registrations</div><div class="cp-card-value">${(data.registrations || 0).toLocaleString()}</div><div class="cp-card-detail">This month</div></div>
+      <div class="cp-card"><div class="cp-card-label">Token Refreshes</div><div class="cp-card-value">${(data.token_refreshes || 0).toLocaleString()}</div><div class="cp-card-detail">This month</div></div>
+    `;
+  }
+
+  function loadSettings() {
+    const info = document.getElementById('settings-info');
+    info.innerHTML = `
+      <p><strong>Tenant:</strong> ${portalApi.tenant || 'N/A'}</p>
+      <p style="margin-top:8px"><strong>API Base URL:</strong> <code>${window.location.origin}</code></p>
+    `;
+  }
+
+  // API Key modal
+  function showCreateKeyModal() {
+    document.getElementById('create-key-modal').style.display = 'flex';
+  }
+  function hideCreateKeyModal() {
+    document.getElementById('create-key-modal').style.display = 'none';
+  }
+
+  document.getElementById('create-key-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = await portalApi.createApiKey({
+        name: document.getElementById('key-name').value,
+        expires_in_days: parseInt(document.getElementById('key-expires').value),
+        permissions: ['*'],
+      });
+      hideCreateKeyModal();
+      const alert = document.getElementById('new-key-alert');
+      document.getElementById('new-key-value').textContent = data.raw_key;
+      alert.style.display = 'block';
+      await loadApiKeys();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  });
+
+  async function revokeKey(keyId) {
+    if (!confirm('Revoke this API key? This cannot be undone.')) return;
+    try {
+      await portalApi.revokeApiKey(keyId);
+      await loadApiKeys();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  // Init
+  if (portalApi.isAuthenticated()) {
+    showDashboard();
+    navigate(window.location.hash.slice(1) || 'dashboard');
+  } else {
+    const hash = window.location.hash.slice(1);
+    showAuth(hash === 'signup');
+  }
+</script>
+</body>
+</html>
