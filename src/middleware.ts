@@ -7,6 +7,7 @@ import { Env, AuthContext, Tenant } from './types';
 import { JWTService } from './jwt';
 import { Database } from './db';
 import { Utils } from './utils';
+import { checkRateLimit } from './rate-limiter';
 
 export class Middleware {
   private jwt: JWTService;
@@ -45,12 +46,25 @@ export class Middleware {
     return res;
   }
 
-  async rateLimit(request: Request, limits: { requests: number; window: number }): Promise<Response | null> {
+  rateLimit(request: Request, limits: { requests: number; window: number }): Response | null {
     const ip = this.utils.getClientIP(request);
-    const path = new URL(request.url).pathname;
-    const allowed = await this.db.checkRateLimit(`${ip}:${path}`, limits.requests, limits.window);
-    if (!allowed) {
-      return this.utils.errorResponse('Too many requests. Please try again later.', 'RATE_LIMITED', 429);
+    // Rate limit per IP globally (not per-path) to reduce key cardinality
+    const result = checkRateLimit(`global:${ip}`, limits.requests, limits.window);
+    if (!result.allowed) {
+      const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+      return new Response(JSON.stringify({
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.', timestamp: new Date().toISOString() },
+      }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Limit': String(limits.requests),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.ceil(result.resetAt / 1000)),
+        },
+      });
     }
     return null;
   }
