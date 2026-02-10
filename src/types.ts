@@ -266,6 +266,13 @@ export interface Env {
   ADMIN_INITIAL_PASSWORD?: string;
   APP_URL: string;
   ENVIRONMENT: 'development' | 'staging' | 'production';
+  // Social login OAuth credentials (Sprint 5)
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
 }
 
 // Error types

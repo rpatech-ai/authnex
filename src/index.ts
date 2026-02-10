@@ -1,7 +1,8 @@
-// Date: 2025-02-07
+// Date: 2025-02-07 (updated 2026-02-09)
 // Author: Alok
 // File: src/index.ts
 // Purpose: Main worker entry, route handling, middleware chain
+// Updated: Added Sprint 3-6 routes (signup, portal, OIDC, social, 2FA, WebAuthn)
 
 import { Env, AuthContext } from './types';
 import { AuthService } from './auth';
@@ -9,6 +10,12 @@ import { AdminService } from './admin';
 import { Middleware } from './middleware';
 import { JWTService } from './jwt';
 import { Utils } from './utils';
+import { SignupService } from './signup';
+import { BillingService } from './billing';
+import { OIDCService } from './oidc';
+import { SocialAuthService } from './social';
+import { TOTPService } from './totp';
+import { WebAuthnService } from './webauthn';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -17,8 +24,14 @@ export default {
     const admin = new AdminService(env);
     const jwt = new JWTService(env);
     const utils = new Utils(env);
+    const signup = new SignupService(env);
+    const billing = new BillingService(env);
+    const oidc = new OIDCService(env);
+    const social = new SocialAuthService(env);
+    const totp = new TOTPService(env);
+    const webauthn = new WebAuthnService(env);
 
-    await Promise.all([middleware.init(), auth.init(), jwt.init()]);
+    await Promise.all([middleware.init(), auth.init(), jwt.init(), signup.init(), oidc.init(), social.init(), webauthn.init()]);
 
     try {
       // CORS preflight
@@ -74,6 +87,133 @@ export default {
           headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
         });
       }
+
+      // === SELF-SERVICE SIGNUP (Sprint 3) ===
+      else if (path === '/api/signup' && method === 'POST') {
+        const body = await request.json() as any;
+        const result = await signup.selfServiceSignup(body, utils.getClientIP(request), utils.getUserAgent(request));
+        response = utils.successResponse(result, 201);
+      }
+      else if (path === '/api/plans' && method === 'GET') {
+        const plans = await signup.getPlans();
+        response = utils.successResponse({ plans });
+      }
+      else if (path === '/api/check-slug' && method === 'GET') {
+        const slug = url.searchParams.get('slug') || '';
+        const available = await signup.checkSlugAvailability(slug);
+        response = utils.successResponse({ slug, available });
+      }
+
+      // === OIDC ENDPOINTS (Sprint 5) ===
+      else if (path === '/.well-known/openid-configuration' && method === 'GET') {
+        const baseUrl = `${url.protocol}//${url.host}`;
+        response = new Response(JSON.stringify(oidc.getDiscovery(baseUrl)), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
+        });
+      }
+      else if (path === '/api/oidc/authorize' && method === 'GET') {
+        response = await oidc.authorize(request);
+      }
+      else if (path === '/api/oidc/token' && method === 'POST') {
+        response = await oidc.token(request);
+      }
+      else if (path === '/api/oidc/userinfo' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        const userinfo = await oidc.userinfo(context);
+        response = new Response(JSON.stringify(userinfo), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // === SOCIAL LOGIN ENDPOINTS (Sprint 5) ===
+      else if (path.match(/^\/api\/social\/(google|microsoft|github)\/authorize$/) && method === 'GET') {
+        const provider = path.split('/')[3];
+        const tenantSlug = url.searchParams.get('tenant_slug') || '';
+        const redirectUri = url.searchParams.get('redirect_uri') || `${url.origin}/auth/callback`;
+        const state = url.searchParams.get('state');
+        const authUrl = social.getAuthorizationUrl(provider, tenantSlug, redirectUri, state || undefined);
+        response = Response.redirect(authUrl, 302);
+      }
+      else if (path.match(/^\/api\/social\/(google|microsoft|github)\/callback$/) && method === 'POST') {
+        const provider = path.split('/')[3];
+        const body = await request.json() as any;
+        const result = await social.handleCallback(
+          provider, body.code, body.redirect_uri,
+          body.tenant_slug, utils.getClientIP(request), utils.getUserAgent(request)
+        );
+        response = utils.successResponse(result);
+      }
+
+      // === WEBAUTHN / PASSKEYS (Sprint 6) ===
+      else if (path === '/api/webauthn/register/options' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const body = await request.json() as any;
+        const result = await webauthn.generateRegistrationOptions(context, body.device_name);
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/webauthn/register/verify' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const body = await request.json() as any;
+        const result = await webauthn.verifyRegistration(context, body);
+        response = utils.successResponse(result, 201);
+      }
+      else if (path === '/api/webauthn/authenticate/options' && method === 'POST') {
+        const body = await request.json() as any;
+        const result = await webauthn.generateAuthenticationOptions(body.email, body.tenant_slug);
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/webauthn/authenticate/verify' && method === 'POST') {
+        const body = await request.json() as any;
+        const result = await webauthn.verifyAuthentication(body, utils.getClientIP(request), utils.getUserAgent(request));
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/webauthn/credentials' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        const credentials = await webauthn.listCredentials(context.user!.id);
+        response = utils.successResponse({ credentials });
+      }
+      else if (path.match(/^\/api\/webauthn\/credentials\/[^/]+$/) && method === 'DELETE') {
+        const context = await middleware.authenticate(request);
+        const credId = path.split('/').pop()!;
+        await webauthn.removeCredential(context, credId);
+        response = utils.successResponse({ message: 'Passkey removed' });
+      }
+
+      // === TOTP 2FA (Sprint 6) ===
+      else if (path === '/api/2fa/totp/setup' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const result = await totp.setup(context);
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/2fa/totp/verify-setup' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const body = await request.json() as any;
+        const result = await totp.verifySetup(context, body.code);
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/2fa/totp/verify' && method === 'POST') {
+        const body = await request.json() as any;
+        const valid = await totp.verifyLogin(body.user_id, body.code);
+        response = utils.successResponse({ valid });
+      }
+      else if (path === '/api/2fa/totp/disable' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const body = await request.json() as any;
+        await totp.disable(context, body.code);
+        response = utils.successResponse({ message: '2FA disabled' });
+      }
+      else if (path === '/api/2fa/totp/backup-codes' && method === 'POST') {
+        const context = await middleware.authenticate(request);
+        const body = await request.json() as any;
+        const result = await totp.regenerateBackupCodes(context, body.code);
+        response = utils.successResponse(result);
+      }
+      else if (path === '/api/2fa/totp/status' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        const enabled = await totp.isEnabled(context.user!.id);
+        response = utils.successResponse({ enabled });
+      }
+
       // === PROTECTED AUTH ENDPOINTS ===
       else if (path === '/api/auth/logout' && method === 'POST') {
         const context = await middleware.authenticate(request);
@@ -86,6 +226,7 @@ export default {
         await auth.changePassword(context.user!.id, body.current_password, body.new_password);
         response = utils.successResponse({ message: 'Password changed' });
       }
+
       // === USER PROFILE ===
       else if (path === '/api/user/profile' && method === 'GET') {
         const context = await middleware.authenticate(request);
@@ -99,6 +240,20 @@ export default {
           .bind(JSON.stringify(body.metadata || {}), context.user!.id).first();
         response = utils.successResponse({ user: updated });
       }
+
+      // === SOCIAL ACCOUNT MANAGEMENT ===
+      else if (path === '/api/user/social-accounts' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        const accounts = await social.getLinkedAccounts(context.user!.id);
+        response = utils.successResponse({ accounts });
+      }
+      else if (path.match(/^\/api\/user\/social-accounts\/\d+$/) && method === 'DELETE') {
+        const context = await middleware.authenticate(request);
+        const accountId = parseInt(path.split('/').pop()!);
+        await social.unlinkAccount(context.user!.id, accountId);
+        response = utils.successResponse({ message: 'Account unlinked' });
+      }
+
       // === GDPR SELF-SERVICE ===
       else if (path === '/api/user/export' && method === 'GET') {
         const context = await middleware.authenticate(request);
@@ -108,6 +263,30 @@ export default {
         );
         response = utils.successResponse(data);
       }
+
+      // === PORTAL ENDPOINTS (Sprint 3) ===
+      else if (path === '/api/portal/dashboard' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        await middleware.requireTenant(request, context);
+        const data = await billing.getPortalDashboard(context);
+        response = utils.successResponse(data);
+      }
+      else if (path === '/api/portal/users' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        await middleware.requireTenant(request, context);
+        const p = Object.fromEntries(url.searchParams);
+        const data = await billing.getPortalUsers(context, {
+          page: parseInt(p.page || '1'), limit: parseInt(p.limit || '20'), search: p.search,
+        });
+        response = utils.successResponse(data);
+      }
+      else if (path === '/api/portal/usage' && method === 'GET') {
+        const context = await middleware.authenticate(request);
+        await middleware.requireTenant(request, context);
+        const data = await billing.getPortalApiUsage(context);
+        response = utils.successResponse(data);
+      }
+
       // === ADMIN ENDPOINTS ===
       else if (path.startsWith('/api/admin/')) {
         const context = await middleware.authenticate(request);
