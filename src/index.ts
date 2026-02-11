@@ -42,8 +42,8 @@ export default {
       const path = url.pathname;
       const method = request.method;
 
-      // Global rate limit
-      const rlResp = await middleware.rateLimit(request, { requests: 100, window: 60 });
+      // Global rate limit (in-memory, zero KV writes)
+      const rlResp = middleware.rateLimit(request, { requests: 100, window: 60 });
       if (rlResp) return rlResp;
 
       let response: Response;

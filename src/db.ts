@@ -8,6 +8,7 @@ import {
   AuditLog, Env, PaginatedResponse, GDPRExportData
 } from './types';
 import { JWTService } from './jwt';
+import { checkRateLimit as inMemoryRateLimit } from './rate-limiter';
 
 // Reusable – copy to project reference
 export class Database {
@@ -277,17 +278,13 @@ export class Database {
     ).run();
   }
 
-  // --- Rate limiting ---
-  async checkRateLimit(key: string, limit: number, window: number): Promise<boolean> {
-    const count = await this.env.CACHE.get(`rate:${key}`, 'text');
-    if (!count) {
-      await this.env.CACHE.put(`rate:${key}`, '1', { expirationTtl: window });
-      return true;
-    }
-    const n = parseInt(count);
-    if (n >= limit) return false;
-    await this.env.CACHE.put(`rate:${key}`, String(n + 1), { expirationTtl: window });
-    return true;
+  // --- Rate limiting (in-memory, zero KV writes) ---
+  // Moved from KV to in-memory to avoid exhausting KV put() daily limits.
+  // KV was doing 1 put per request for rate limiting alone — the #1 cause of limit exhaustion.
+  // In-memory counters reset when the Worker isolate is evicted, which is acceptable
+  // for rate limiting (brief resets are better than hitting KV write quotas).
+  checkRateLimit(key: string, limit: number, window: number): boolean {
+    return inMemoryRateLimit(key, limit, window).allowed;
   }
 
   // --- User-tenant operations ---
